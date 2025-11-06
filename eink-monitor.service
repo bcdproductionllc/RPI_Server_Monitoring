@@ -1,0 +1,16 @@
+[Unit]
+Description=E-ink Server Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/eink-server-monitor
+ExecStart=/usr/bin/python3 /home/pi/eink-server-monitor/monitor.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
