@@ -1,129 +1,197 @@
-# E-ink Server Monitor
+# E-ink Server Monitor 📊
 
-A real-time server monitoring display using a 2.13" Waveshare E-ink display and Prometheus metrics. Perfect for at-a-glance monitoring of your server's vital statistics including UPS status, GPU metrics, CPU performance, and system resources.
+A real-time system monitoring dashboard for Waveshare 2.13" e-ink displays (250x122), displaying server statistics in a clean three-column layout.
 
+**Created by BCD PRODUCTION LLC**
+
+![Display Layout](docs/display-preview.png)
+
+---
+
+## Support This Project ☕
+
+If you find this project helpful, consider buying me a coffee!
+
+[![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=bcdproduction&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/bcdproduction)
+
+---
 
 ## Features
 
-- **Three-column layout** optimized for 2.13" (250x122) E-ink displays
-- **Real-time metrics** from Prometheus
-- **UPS monitoring**: Battery level, runtime, load, temperature, voltage
-- **GPU monitoring**: Temperature, utilization, power draw, fan speed, clock speeds
-- **System monitoring**: CPU temperature/frequency/usage, memory, disk usage, chassis fan
-- **Partial refresh support** to minimize screen flicker
-- **Low power consumption** perfect for 24/7 operation
+- **UPS Monitoring**: Battery level, runtime, load, temperature, voltage, and current
+- **GPU Statistics**: Temperature, utilization, power draw, fan speed, and clock speeds (RTX 3090 Ti)
+- **System Metrics**: CPU temperature/frequency/usage, memory usage, disk usage, and chassis fan RPM
+- **Efficient Updates**: Partial refresh every 20 seconds with full refresh every 10 cycles to minimize ghosting
+- **Three-Column Layout**: Organized display optimized for e-ink readability
 
 ## Hardware Requirements
 
-- Raspberry Pi (any model with GPIO support)
-- Waveshare 2.13" E-ink Display V4 (250x122 resolution)
-- Server running Prometheus with appropriate exporters
+- Raspberry Pi (tested on Pi 3/4/5) or similar single-board computer
+- Waveshare 2.13" e-ink display V4 (250x122 resolution)
+- SPI interface enabled on your Pi
 
-## Software Requirements
+## Software Architecture
 
-### On the Raspberry Pi (Display Device)
+This project uses **Prometheus** as the metrics collection backend. You'll need:
 
-- Python 3.7 or higher
-- Waveshare E-paper library
-- Required Python packages:
-  - `requests`
-  - `Pillow` (PIL)
-  - SPI interface enabled
+1. **Prometheus server** - Can run on the same Raspberry Pi or on a separate server
+2. **Exporters** running on the target server(s) you want to monitor:
+   - `node_exporter` - System metrics (CPU, memory, disk)
+   - `nvidia_gpu_exporter` - GPU metrics
+   - Custom UPS exporter (SNMP-based or similar)
 
-### On Your Server (Being Monitored)
-
-**Prometheus does NOT need to be installed on the Raspberry Pi.** Prometheus should be running on the server you want to monitor (or a dedicated monitoring server). The Raspberry Pi only needs network access to query the Prometheus API.
-
-Required Prometheus exporters on your server:
-- **Node Exporter** - For CPU, memory, disk, and fan metrics
-- **NVIDIA GPU Exporter** - For GPU metrics (if monitoring NVIDIA GPU)
-- **Custom UPS Exporter** - For UPS metrics (or SNMP exporter for UPS)
+**Note**: The Raspberry Pi running the display **does not** need to run Prometheus or exporters itself - it only queries a Prometheus server elsewhere on your network.
 
 ## Installation
 
-### 1. Prepare the Raspberry Pi
+### 1. Set Up the Display Hardware
 
-Enable SPI interface:
+Connect your Waveshare 2.13" e-ink display to your Raspberry Pi via the SPI interface.
+
+### 2. Enable SPI on Raspberry Pi
+
 ```bash
 sudo raspi-config
-# Navigate to: Interface Options -> SPI -> Enable
+# Navigate to: Interfacing Options -> SPI -> Enable
 ```
 
-Install system dependencies:
+### 3. Install System Dependencies
+
 ```bash
 sudo apt-get update
-sudo apt-get install python3-pip python3-pil python3-numpy git
+sudo apt-get install -y python3-pip python3-pil python3-numpy git
 ```
 
-### 2. Install Waveshare E-paper Library
+### 4. Install Waveshare E-Paper Library
 
 ```bash
-cd ~
 git clone https://github.com/waveshare/e-Paper.git
 cd e-Paper/RaspberryPi_JetsonNano/python/
 sudo python3 setup.py install
 ```
 
-### 3. Clone This Repository
+### 5. Install Python Dependencies
 
 ```bash
-cd ~
-git clone https://github.com/yourusername/eink-server-monitor.git
-cd eink-server-monitor
+pip3 install requests pillow
 ```
 
-### 4. Install Python Dependencies
+### 6. Clone This Repository
 
 ```bash
-pip3 install -r requirements.txt
+git clone https://github.com/bcdproductionllc/RPI_Server_Monitoring.git
+cd RPI_Server_Monitoring
 ```
 
-### 5. Configure the Monitor
+### 7. Copy Waveshare Library Files
 
-Edit `monitor.py` and update the configuration section:
+Copy the `lib` folder from the Waveshare e-Paper library to your project directory:
+
+```bash
+cp -r /path/to/e-Paper/RaspberryPi_JetsonNano/python/lib ./
+```
+
+## Configuration
+
+Edit `monitor.py` to configure your setup:
 
 ```python
-# Configuration
-PROMETHEUS_URL = "http://192.168.100.55:9090"  # Change to your Prometheus server IP
-REFRESH_INTERVAL = 20  # Seconds between updates
-FULL_REFRESH_CYCLES = 10  # Full refresh every N partial refreshes
+# Prometheus server URL (update to your Prometheus instance)
+PROMETHEUS_URL = "http://192.168.100.55:9090"
+
+# Update interval in seconds
+REFRESH_INTERVAL = 20
+
+# Full refresh every N cycles (reduces ghosting)
+FULL_REFRESH_CYCLES = 10
 ```
 
-**Important:** Update the server name and GPU model in the code:
-- **Line 79**: Change `'DELL 7820 Server Stats'` to your server name
-- **Line 142**: Change `'RTX 3090 Ti'` to your actual GPU model name
+### Prometheus Queries
 
-### 6. Set Up Prometheus Exporters on Your Server
+The monitor queries the following metrics. Adjust the queries in the code to match your exporter labels:
 
-This project expects specific Prometheus metrics. Ensure your server has:
-
-**Node Exporter:**
-```bash
-# Download and run Node Exporter
-wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
-tar xvfz node_exporter-1.7.0.linux-amd64.tar.gz
-cd node_exporter-1.7.0.linux-amd64
-./node_exporter
-```
-
-**NVIDIA GPU Exporter:**
-```bash
-# Install nvidia_gpu_prometheus_exporter
-pip install nvidia-gpu-prometheus-exporter
-nvidia_gpu_prometheus_exporter
-```
-
-**UPS Exporter:**
-Set up an SNMP exporter or custom exporter for your UPS that exposes the following metrics:
+**UPS Metrics:**
 - `ups_battery_charge_percent`
 - `ups_runtime_minutes`
 - `ups_load_percent`
 - `ups_temperature_celsius`
 - `ups_input_voltage`
 - `ups_output_voltage`
+- `ups_battery_v`
 - `ups_load_current`
 
-## Usage
+**GPU Metrics:**
+- `nvidia_gpu_temperature_celsius`
+- `nvidia_gpu_utilization_percent`
+- `nvidia_gpu_power_draw_watts`
+- `nvidia_gpu_fan_percent`
+- `nvidia_gpu_clock_graphics_mhz`
+- `nvidia_gpu_clock_memory_mhz`
+
+**System Metrics:**
+- `node_hwmon_temp_celsius{chip="platform_coretemp_0"}`
+- `node_cpu_scaling_frequency_hertz`
+- `node_cpu_seconds_total`
+- `node_memory_MemTotal_bytes`
+- `node_memory_MemAvailable_bytes`
+- `node_filesystem_size_bytes{mountpoint="/"}`
+- `node_filesystem_avail_bytes{mountpoint="/"}`
+- `node_hwmon_fan_rpm{sensor="fan3"}`
+
+## Setting Up Prometheus (On Your Server)
+
+### Install Prometheus
+
+On the server you want to monitor:
+
+```bash
+wget https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
+tar xvfz prometheus-*.tar.gz
+cd prometheus-*/
+```
+
+### Install Exporters
+
+**Node Exporter** (system metrics):
+```bash
+wget https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
+tar xvfz node_exporter-*.tar.gz
+cd node_exporter-*/
+./node_exporter &
+```
+
+**NVIDIA GPU Exporter**:
+```bash
+# Install nvidia_gpu_prometheus_exporter or similar
+pip install nvidia-ml-py3
+# Use a custom exporter script or an existing one from GitHub
+```
+
+### Configure Prometheus
+
+Edit `prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+  
+  - job_name: 'nvidia_gpu'
+    static_configs:
+      - targets: ['localhost:9835']
+  
+  - job_name: 'ups'
+    static_configs:
+      - targets: ['localhost:9614']
+```
+
+Start Prometheus:
+```bash
+./prometheus --config.file=prometheus.yml
+```
+
+## Running the Monitor
 
 ### Manual Run
 
@@ -131,17 +199,9 @@ Set up an SNMP exporter or custom exporter for your UPS that exposes the followi
 python3 monitor.py
 ```
 
-Press `Ctrl+C` to stop the monitor gracefully.
+### Run as Systemd Service
 
-### Run as Systemd Service (Recommended)
-
-Create a systemd service file:
-
-```bash
-sudo nano /etc/systemd/system/eink-monitor.service
-```
-
-Add the following content:
+Create `/etc/systemd/system/eink-monitor.service`:
 
 ```ini
 [Unit]
@@ -151,95 +211,83 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/eink-server-monitor
-ExecStart=/usr/bin/python3 /home/pi/eink-server-monitor/monitor.py
-Restart=on-failure
+WorkingDirectory=/home/pi/RPI_Server_Monitoring
+ExecStart=/usr/bin/python3 /home/pi/RPI_Server_Monitoring/monitor.py
+Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Enable and start the service:
+Enable and start:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable eink-monitor.service
-sudo systemctl start eink-monitor.service
+sudo systemctl enable eink-monitor
+sudo systemctl start eink-monitor
 ```
 
 Check status:
 ```bash
-sudo systemctl status eink-monitor.service
-```
-
-View logs:
-```bash
-journalctl -u eink-monitor.service -f
+sudo systemctl status eink-monitor
 ```
 
 ## Customization
 
-### Changing Displayed Metrics
+### Modify Layout
 
-The monitor queries Prometheus with specific query strings. To modify what's displayed, edit the `query_prometheus()` calls in the `draw_display()` method.
+The display uses a three-column layout with dimensions 250x122 pixels. You can adjust column positions and metrics in the `draw_display()` method.
 
-Example - changing CPU temperature sensor:
+### Change Fonts
+
+Update font paths in the `__init__` method:
+
 ```python
-# Original
-cpu_temp = self.query_prometheus('node_hwmon_temp_celsius{chip="platform_coretemp_0",sensor="temp1"}')
-
-# Modified for different sensor
-cpu_temp = self.query_prometheus('node_hwmon_temp_celsius{chip="k10temp",sensor="temp1"}')
+self.font_header = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 9)
+self.font_title = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 8)
+self.font_normal = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 7)
 ```
 
-### Adjusting Layout
+### Add More Metrics
 
-Modify these variables in `draw_display()`:
-- `col1_x`, `col2_x`, `col3_x` - Column x-positions
-- `start_y` - Starting y-position for content
-- Font sizes and spacing in the y-increment values
+Add new Prometheus queries and display them in any column:
 
-### Changing Refresh Interval
-
-Adjust these constants:
 ```python
-REFRESH_INTERVAL = 20  # Seconds between updates
-FULL_REFRESH_CYCLES = 10  # Full refresh every 200 seconds (20s * 10)
+new_metric = self.query_prometheus('your_metric_name')
+if new_metric:
+    self.draw.text((col_x, y), f"Label: {float(new_metric):.1f}", font=self.font_normal, fill=0)
+    y += 9
 ```
 
 ## Troubleshooting
 
-### Display not working
-- Verify SPI is enabled: `lsmod | grep spi`
+**Display not working:**
+- Ensure SPI is enabled: `ls /dev/spidev0.0`
 - Check wiring connections
-- Ensure Waveshare library is installed correctly
+- Verify Waveshare library installation
 
-### No metrics showing
-- Verify Prometheus URL is accessible: `curl http://your-prometheus-ip:9090/api/v1/query?query=up`
-- Check that exporters are running on your server
-- Verify firewall allows access to Prometheus port 9090
+**No data showing:**
+- Test Prometheus connection: `curl http://YOUR_PROMETHEUS:9090/api/v1/query?query=up`
+- Verify exporters are running on your server
+- Check metric names match your Prometheus configuration
 
-### Font errors
-The script will fall back to default fonts if TrueType fonts aren't found. To use better fonts:
-```bash
-sudo apt-get install fonts-dejavu-core
+**Ghosting issues:**
+- Increase `FULL_REFRESH_CYCLES` value
+- Decrease `REFRESH_INTERVAL` for more frequent updates
+
+**Import errors:**
+- Ensure `lib` folder is in the same directory as `monitor.py`
+- Reinstall Waveshare library
+
+## Project Structure
+
 ```
-
-## Display Layout
-
-```
-┌────────────────────────────────────────────────┐
-│ DELL 7820 Server Stats          HH:MM Mon DD   │
-├────────────────────────────────────────────────┤
-│ UPS 1500X     │ RTX 3090 Ti   │ CPU            │
-│ Battery: XX%  │ Temp: XXC     │ Temp: XXC      │
-│ Runtime: XXm  │ Utilization:  │ Freq: X.XGHz   │
-│ Load: XX%     │ Power: XXXW   │ Usage: XX%     │
-│ Temp: XXC     │ Fan: XX%      │ Mem: XXXG      │
-│ Input: XXXV   │ Core: XXXX    │ Disk: X.XT     │
-│ Output: XXXV  │ Mem: XXXX     │ Cha.: XXXXrpm  │
-└────────────────────────────────────────────────┘
+RPI_Server_Monitoring/
+├── monitor.py          # Main application
+├── lib/                # Waveshare e-paper library
+├── LICENSE            # MIT License
+└── README.md          # This file
 ```
 
 ## Contributing
@@ -252,16 +300,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Waveshare for the excellent E-paper displays and libraries
-- Prometheus project for the powerful monitoring system
-- The open-source community for various exporters
+- Waveshare for the excellent e-paper displays and libraries
+- Prometheus for the powerful metrics collection system
+- The open-source community
 
 ## Support
+
+If you encounter issues or have questions:
+- Open an issue on [GitHub](https://github.com/bcdproductionllc/RPI_Server_Monitoring/issues)
+- Check the Waveshare e-Paper wiki
+- Review Prometheus documentation
+
+## Screenshots
+
+*Add your actual display photos here*
+
+---
+
+**Made with ❤️ by BCD PRODUCTION LLC**
 
 If you find this project helpful, consider buying me a coffee!
 
 [![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=bcdproduction&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/bcdproduction)
-
-## Author
-
-Created for monitoring high-performance servers and GPU workstations with at-a-glance real-time statistics.
