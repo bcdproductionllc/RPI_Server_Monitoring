@@ -1,0 +1,46 @@
+# Example Prometheus Configuration
+# Save as: /opt/prometheus/prometheus.yml
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'homelab'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter - System metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+        labels:
+          hostname: 'dell-7820'
+          environment: 'homelab'
+
+  # NVIDIA GPU Exporter
+  - job_name: 'nvidia_gpu'
+    static_configs:
+      - targets: ['localhost:9835']
+        labels:
+          hostname: 'dell-7820'
+          gpu_model: 'rtx-3090-ti'
+
+  # UPS Exporter (SNMP-based or custom)
+  - job_name: 'ups'
+    static_configs:
+      - targets: ['localhost:9614']
+        labels:
+          hostname: 'dell-7820'
+          ups_model: 'cyberpower-1500'
+
+  # Optional: Additional servers
+  # - job_name: 'node-server2'
+  #   static_configs:
+  #     - targets: ['192.168.100.56:9100']
+  #       labels:
+  #         hostname: 'server-2'
