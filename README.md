@@ -301,9 +301,8 @@ If you encounter issues or have questions:
 - Check the Waveshare e-Paper wiki
 - Review Prometheus documentation
 
-## Screenshots
+![IMG_9517](https://github.com/user-attachments/assets/25ee6cf3-fc58-4865-adfe-0a6475806f80)
 
-*Add your actual display photos here*
 
 ---
 
