@@ -4,8 +4,6 @@ A real-time system monitoring dashboard for Waveshare 2.13" e-ink displays (250x
 
 **Created by BCD PRODUCTION LLC**
 
-![Display Layout]<img width="635" height="371" alt="display-preview" src="https://github.com/user-attachments/assets/b5707d34-6efa-4b89-88d1-180c7ddb1956" />
-
 
 ---
 
