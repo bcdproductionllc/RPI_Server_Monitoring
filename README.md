@@ -280,16 +280,6 @@ if new_metric:
 - Ensure `lib` folder is in the same directory as `monitor.py`
 - Reinstall Waveshare library
 
-## Project Structure
-
-```
-RPI_Server_Monitoring/
-├── monitor.py          # Main application
-├── lib/                # Waveshare e-paper library
-├── LICENSE            # MIT License
-└── README.md          # This file
-```
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
